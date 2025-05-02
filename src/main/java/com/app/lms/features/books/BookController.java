@@ -70,6 +70,4 @@ public class BookController {
 	public void deleteBook(@PathVariable(value = "bookId", required = true) @Valid @NotNull Integer bookId) {
 		bookService.deleteBook(bookId);
 	}
-	
-	
 }

@@ -19,7 +19,6 @@ public class WebSecurityConfiguration {
     public WebSecurityConfiguration(CustomUserDetailsService customUserDetailsService, JwtAuthorizationFilter authorizationFilter) {
         this.userDetailsService = customUserDetailsService;
         this.authorizationFilter = authorizationFilter;
-
     }
 
     @Bean
@@ -29,13 +28,15 @@ public class WebSecurityConfiguration {
         authenticationManagerBuilder.userDetailsService(userDetailsService).passwordEncoder(noOpPasswordEncoder);
         return authenticationManagerBuilder.build();
     }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-
         http.csrf()
             .disable()
             .authorizeRequests()
+            .antMatchers("/login.html", "/static/**", "/css/**", "/js/**", "/*.html").permitAll()
             .regexMatchers("/api/v1/login").permitAll()
+            .antMatchers("/api/**").authenticated()
             .anyRequest().authenticated()
             .and().sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             .and().addFilterBefore(authorizationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -48,5 +49,4 @@ public class WebSecurityConfiguration {
     public NoOpPasswordEncoder passwordEncoder() {
         return (NoOpPasswordEncoder) NoOpPasswordEncoder.getInstance();
     }
-
 }
