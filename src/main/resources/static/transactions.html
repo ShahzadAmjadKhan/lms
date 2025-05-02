@@ -88,6 +88,19 @@
                                 <option value="RETURN">Return</option>
                             </select>
                         </div>
+                        <!-- Status Dropdown -->
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-control" id="status" required>
+                                <option value="Borrowed" selected>Borrowed</option>
+                                <option value="Returned">Returned</option>
+                            </select>
+                        </div>
+                        <!-- Comments Field -->
+                        <div class="mb-3">
+                            <label for="comments" class="form-label">Comments</label>
+                            <textarea class="form-control" id="comments" rows="2" placeholder="Enter any comments..."></textarea>
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -189,12 +202,19 @@
             `).join('');
         }
 
-        // Add new transaction
-        document.getElementById('saveTransactionBtn').addEventListener('click', async function() {
+        let isEditMode = false;
+        let currentEditTransactionId = null;
+        const saveTransactionBtn = document.getElementById('saveTransactionBtn');
+
+        // Add new transaction handler
+        async function handleAddTransaction() {
+            // Collect all required fields, including status and comments
             const transaction = {
                 bookId: parseInt(document.getElementById('bookId').value),
                 patronId: parseInt(document.getElementById('patronId').value),
-                transactionType: document.getElementById('transactionType').value
+                transactionType: document.getElementById('transactionType').value,
+                status: document.getElementById('status').value, // Add status from dropdown
+                comments: document.getElementById('comments').value // Add comments field
             };
 
             try {
@@ -204,7 +224,7 @@
                 });
 
                 if (response.ok) {
-                    $('#addTransactionModal').modal('hide');
+                    bootstrap.Modal.getInstance(document.getElementById('addTransactionModal')).hide();
                     document.getElementById('addTransactionForm').reset();
                     loadTransactions();
                 } else if (response.status === 403) {
@@ -218,7 +238,82 @@
                 console.error('Error adding transaction:', error);
                 alert('An error occurred while adding the transaction');
             }
-        });
+        }
+
+        // Edit transaction
+        async function editTransaction(transactionId) {
+            try {
+                const response = await fetchWithAuth(`/lms/api/v1/transaction/${transactionId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('bookId').value = data.bookId;
+                    document.getElementById('patronId').value = data.patronId;
+                    document.getElementById('transactionType').value = data.transactionType;
+                    document.getElementById('status').value = data.status || 'Borrowed'; // Set status value
+                    document.getElementById('comments').value = data.comments || ''; // Set comments value
+
+                    // Show the modal
+                    const modal = new bootstrap.Modal(document.getElementById('addTransactionModal'));
+                    modal.show();
+
+                    // Switch to edit mode
+                    isEditMode = true;
+                    currentEditTransactionId = transactionId;
+                    saveTransactionBtn.textContent = 'Update';
+                    saveTransactionBtn.removeEventListener('click', handleAddTransaction);
+                    saveTransactionBtn.addEventListener('click', handleUpdateTransaction);
+                } else if (response.status === 403) {
+                    // Token expired or invalid, redirect to login
+                    localStorage.removeItem('token');
+                    window.location.href = '/lms/login.html';
+                } else {
+                    console.error('Failed to load transaction');
+                }
+            } catch (error) {
+                console.error('Error loading transaction:', error);
+            }
+        }
+
+        // Update transaction handler
+        async function handleUpdateTransaction() {
+            if (!isEditMode || currentEditTransactionId === null) return;
+            const updatedTransaction = {
+                transactionId: currentEditTransactionId,
+                bookId: parseInt(document.getElementById('bookId').value),
+                patronId: parseInt(document.getElementById('patronId').value),
+                transactionType: document.getElementById('transactionType').value,
+                status: document.getElementById('status').value, // Add status from dropdown
+                comments: document.getElementById('comments').value // Add comments field
+            };
+
+            try {
+                const response = await fetchWithAuth(`/lms/api/v1/transaction/${updatedTransaction.transactionId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(updatedTransaction)
+                });
+
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('addTransactionModal')).hide();
+                    document.getElementById('addTransactionForm').reset();
+                    loadTransactions();
+                    // Reset to add mode
+                    isEditMode = false;
+                    currentEditTransactionId = null;
+                    saveTransactionBtn.textContent = 'Save';
+                    saveTransactionBtn.removeEventListener('click', handleUpdateTransaction);
+                    saveTransactionBtn.addEventListener('click', handleAddTransaction);
+                } else if (response.status === 403) {
+                    // Token expired or invalid, redirect to login
+                    localStorage.removeItem('token');
+                    window.location.href = '/lms/login.html';
+                } else {
+                    alert('Failed to update transaction');
+                }
+            } catch (error) {
+                console.error('Error updating transaction:', error);
+                alert('An error occurred while updating the transaction');
+            }
+        }
 
         // Logout
         document.getElementById('logoutBtn').addEventListener('click', function() {
@@ -226,10 +321,13 @@
             window.location.href = '/lms/login.html';
         });
 
+        // Initial event listener for add
+        saveTransactionBtn.addEventListener('click', handleAddTransaction);
+
         // Load data when page loads
         loadBooks();
         loadPatrons();
         loadTransactions();
     </script>
 </body>
-</html> 
+</html>

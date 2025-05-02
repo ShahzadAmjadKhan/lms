@@ -82,6 +82,22 @@
                             <input type="text" class="form-control" id="isbn" required>
                         </div>
                         <div class="mb-3">
+                            <label for="genre" class="form-label">Genre</label>
+                            <select class="form-control" id="genre" required>
+                                <option value="">Select Genre</option>
+                                <option value="Fiction">Fiction</option>
+                                <option value="Non-Fiction">Non-Fiction</option>
+                                <option value="Science Fiction">Science Fiction</option>
+                                <option value="Mystery">Mystery</option>
+                                <option value="Romance">Romance</option>
+                                <option value="Biography">Biography</option>
+                                <option value="History">History</option>
+                                <option value="Poetry">Poetry</option>
+                                <option value="Drama">Drama</option>
+                                <option value="Fantasy">Fantasy</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
                             <label for="quantity" class="form-label">Quantity</label>
                             <input type="number" class="form-control" id="quantity" required>
                         </div>
@@ -153,12 +169,17 @@
             `).join('');
         }
 
-        // Add new book
-        document.getElementById('saveBookBtn').addEventListener('click', async function() {
+        let isEditMode = false;
+        let currentEditBookId = null;
+        const saveBookBtn = document.getElementById('saveBookBtn');
+
+        // Add new book handler
+        async function handleAddBook() {
             const book = {
                 title: document.getElementById('title').value,
                 author: document.getElementById('author').value,
                 isbn: document.getElementById('isbn').value,
+                genre: document.getElementById('genre').value,
                 totalQuantity: parseInt(document.getElementById('quantity').value),
                 availableQuantity: parseInt(document.getElementById('quantity').value)
             };
@@ -170,11 +191,10 @@
                 });
 
                 if (response.ok) {
-                    $('#addBookModal').modal('hide');
+                    bootstrap.Modal.getInstance(document.getElementById('addBookModal')).hide();
                     document.getElementById('addBookForm').reset();
                     loadBooks();
                 } else if (response.status === 403) {
-                    // Token expired or invalid, redirect to login
                     localStorage.removeItem('token');
                     window.location.href = '/lms/login.html';
                 } else {
@@ -184,7 +204,85 @@
                 console.error('Error adding book:', error);
                 alert('An error occurred while adding the book');
             }
-        });
+        }
+
+        // Edit book
+        async function editBook(bookId) {
+            try {
+                const response = await fetchWithAuth(`/lms/api/v1/book/${bookId}`);
+                if (response.ok) {
+                    const book = await response.json();
+                    document.getElementById('title').value = book.title;
+                    document.getElementById('author').value = book.author;
+                    document.getElementById('isbn').value = book.isbn;
+                    document.getElementById('genre').value = book.genre;
+                    document.getElementById('quantity').value = book.totalQuantity;
+
+                    // Show the modal
+                    const modal = new bootstrap.Modal(document.getElementById('addBookModal'));
+                    modal.show();
+
+                    // Switch to edit mode
+                    isEditMode = true;
+                    currentEditBookId = bookId;
+                    saveBookBtn.textContent = 'Update';
+                    saveBookBtn.removeEventListener('click', handleAddBook);
+                    saveBookBtn.addEventListener('click', handleUpdateBook);
+                } else if (response.status === 403) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/lms/login.html';
+                } else {
+                    alert('Failed to load book details');
+                }
+            } catch (error) {
+                console.error('Error loading book details:', error);
+                alert('An error occurred while loading book details');
+            }
+        }
+
+        // Update book handler
+        async function handleUpdateBook() {
+            if (!isEditMode || currentEditBookId === null) return;
+            const updatedBook = {
+                bookId: currentEditBookId,
+                title: document.getElementById('title').value,
+                author: document.getElementById('author').value,
+                isbn: document.getElementById('isbn').value,
+                genre: document.getElementById('genre').value,
+                totalQuantity: parseInt(document.getElementById('quantity').value),
+                availableQuantity: parseInt(document.getElementById('quantity').value)
+            };
+
+            try {
+                const updateResponse = await fetchWithAuth(`/lms/api/v1/book/${currentEditBookId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(updatedBook)
+                });
+
+                if (updateResponse.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('addBookModal')).hide();
+                    document.getElementById('addBookForm').reset();
+                    loadBooks();
+                    // Reset to add mode
+                    isEditMode = false;
+                    currentEditBookId = null;
+                    saveBookBtn.textContent = 'Save';
+                    saveBookBtn.removeEventListener('click', handleUpdateBook);
+                    saveBookBtn.addEventListener('click', handleAddBook);
+                } else if (updateResponse.status === 403) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/lms/login.html';
+                } else {
+                    alert('Failed to update book');
+                }
+            } catch (error) {
+                console.error('Error updating book:', error);
+                alert('An error occurred while updating the book');
+            }
+        }
+
+        // Initial event listener for add
+        saveBookBtn.addEventListener('click', handleAddBook);
 
         // Logout
         document.getElementById('logoutBtn').addEventListener('click', function() {
