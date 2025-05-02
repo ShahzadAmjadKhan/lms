@@ -290,6 +290,27 @@
             window.location.href = '/lms/login.html';
         });
 
+        // Delete patron by ID
+        async function deletePatron(patronId) {
+            if (!confirm('Are you sure you want to delete this patron?')) return;
+            try {
+                const response = await fetchWithAuth(`/lms/api/v1/patron/${patronId}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    loadPatrons();
+                } else if (response.status === 403) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/lms/login.html';
+                } else {
+                    alert('Failed to delete patron');
+                }
+            } catch (error) {
+                console.error('Error deleting patron:', error);
+                alert('An error occurred while deleting the patron');
+            }
+        }
+
         // Load patrons when page loads
         loadPatrons();
     </script>
