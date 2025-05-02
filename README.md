@@ -91,8 +91,12 @@ src/
 │   ├── java/
 │   │   └── com/
 │   │       └── lms/
-│   │           ├── features/        
-│   │           ├── security/
+│   │           ├── features/        # Feature-based modules
+│   │           │   ├── books/       # Book management module
+│   │           │   ├── patrons/     # Patron management module
+│   │           │   ├── transactions/ # Transaction management module
+│   │           │   └── login/       # Login module
+│   │           ├── security/        # Security implementation
 │   │           ├── LmsApplication.java
 │   │           └── AppConfiguration.java
 │   └── resources/
@@ -100,6 +104,14 @@ src/
 │       ├── templates/              # Thymeleaf templates
 │       └── application.properties  # Configuration
 ```
+
+The project follows a modular architecture where each feature (books, patrons, transactions, login) is completely separated into its own module with dedicated controller, model, service, and repository layers. This separation provides better maintainability and scalability.
+
+The security module implements Spring Security with JWT (JSON Web Token) authentication. It handles:
+- Username and password-based authentication
+- JWT token generation and validation
+- Security configurations and filters
+- Role-based access control
 
 ## Contributing
 
