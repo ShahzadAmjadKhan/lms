@@ -152,10 +152,10 @@
                     <div class="card patron-card">
                         <div class="card-body">
                             <h5 class="card-title">${patron.name}</h5>
-                            <h6 class="card-subtitle mb-2 text-muted">${patron.email}</h6>
+                            <h6 class="card-subtitle mb-2 text-muted">ID: ${patron.patronId}</h6>
                             <p class="card-text">
-                                <strong>Phone:</strong> ${patron.phone}<br>
-                                <strong>Status:</strong> ${patron.status}
+                                <strong>Cell Number:</strong> ${patron.cellNumber || ''}<br>
+                                <strong>Address:</strong> ${patron.addressLine1 || ''}, ${patron.city || ''}, ${patron.country || ''}
                             </p>
                             <button class="btn btn-primary btn-sm" onclick="editPatron(${patron.patronId})">Edit</button>
                             <button class="btn btn-danger btn-sm" onclick="deletePatron(${patron.patronId})">Delete</button>

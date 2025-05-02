@@ -81,13 +81,6 @@
                                 <!-- Patrons will be loaded here -->
                             </select>
                         </div>
-                        <div class="mb-3">
-                            <label for="transactionType" class="form-label">Type</label>
-                            <select class="form-control" id="transactionType" required>
-                                <option value="CHECKOUT">Checkout</option>
-                                <option value="RETURN">Return</option>
-                            </select>
-                        </div>
                         <!-- Status Dropdown -->
                         <div class="mb-3">
                             <label for="status" class="form-label">Status</label>
@@ -129,7 +122,11 @@
             return fetch(url, { ...options, headers });
         };
 
-        // Load books for dropdown
+        // Lookup maps for book and patron names
+        let bookMap = {};
+        let patronMap = {};
+
+        // Load books for dropdown and build lookup map
         async function loadBooks() {
             try {
                 const response = await fetchWithAuth('/lms/api/v1/books');
@@ -139,13 +136,18 @@
                     bookSelect.innerHTML = data.books.map(book => 
                         `<option value="${book.bookId}">${book.title} (${book.author})</option>`
                     ).join('');
+                    // Build bookId -> title map
+                    bookMap = {};
+                    data.books.forEach(book => {
+                        bookMap[book.bookId] = book.title;
+                    });
                 }
             } catch (error) {
                 console.error('Error loading books:', error);
             }
         }
 
-        // Load patrons for dropdown
+        // Load patrons for dropdown and build lookup map
         async function loadPatrons() {
             try {
                 const response = await fetchWithAuth('/lms/api/v1/patrons');
@@ -153,8 +155,13 @@
                     const data = await response.json();
                     const patronSelect = document.getElementById('patronId');
                     patronSelect.innerHTML = data.patrons.map(patron => 
-                        `<option value="${patron.patronId}">${patron.name} (${patron.email})</option>`
+                        `<option value="${patron.patronId}">${patron.name}</option>`
                     ).join('');
+                    // Build patronId -> name map
+                    patronMap = {};
+                    data.patrons.forEach(patron => {
+                        patronMap[patron.patronId] = patron.name;
+                    });
                 }
             } catch (error) {
                 console.error('Error loading patrons:', error);
@@ -180,19 +187,19 @@
             }
         }
 
-        // Display transactions
+        // Display transactions with book and patron names
         function displayTransactions(transactions) {
             const transactionsList = document.getElementById('transactionsList');
             transactionsList.innerHTML = transactions.map(transaction => `
                 <div class="col-md-4 mb-4">
                     <div class="card transaction-card">
                         <div class="card-body">
-                            <h5 class="card-title">${transaction.book.title}</h5>
-                            <h6 class="card-subtitle mb-2 text-muted">${transaction.patron.name}</h6>
+                            <h5 class="card-title">${bookMap[transaction.bookId] || 'Book ID: ' + transaction.bookId}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">${patronMap[transaction.patronId] || 'Patron ID: ' + transaction.patronId}</h6>
                             <p class="card-text">
-                                <strong>Type:</strong> ${transaction.transactionType}<br>
-                                <strong>Date:</strong> ${new Date(transaction.transactionDate).toLocaleDateString()}<br>
-                                <strong>Status:</strong> ${transaction.status}
+                                <strong>Status:</strong> ${transaction.status || ''}<br>
+                                <strong>Due Date:</strong> ${transaction.dueDate || ''}<br>
+                                <strong>Comments:</strong> ${transaction.comments || ''}
                             </p>
                             <button class="btn btn-primary btn-sm" onclick="editTransaction(${transaction.transactionId})">Edit</button>
                             <button class="btn btn-danger btn-sm" onclick="deleteTransaction(${transaction.transactionId})">Delete</button>
@@ -212,7 +219,6 @@
             const transaction = {
                 bookId: parseInt(document.getElementById('bookId').value),
                 patronId: parseInt(document.getElementById('patronId').value),
-                transactionType: document.getElementById('transactionType').value,
                 status: document.getElementById('status').value, // Add status from dropdown
                 comments: document.getElementById('comments').value // Add comments field
             };
@@ -248,7 +254,6 @@
                     const data = await response.json();
                     document.getElementById('bookId').value = data.bookId;
                     document.getElementById('patronId').value = data.patronId;
-                    document.getElementById('transactionType').value = data.transactionType;
                     document.getElementById('status').value = data.status || 'Borrowed'; // Set status value
                     document.getElementById('comments').value = data.comments || ''; // Set comments value
 
@@ -281,7 +286,6 @@
                 transactionId: currentEditTransactionId,
                 bookId: parseInt(document.getElementById('bookId').value),
                 patronId: parseInt(document.getElementById('patronId').value),
-                transactionType: document.getElementById('transactionType').value,
                 status: document.getElementById('status').value, // Add status from dropdown
                 comments: document.getElementById('comments').value // Add comments field
             };
